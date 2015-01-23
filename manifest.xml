@@ -1,0 +1,18 @@
+<package>
+  <description brief="comms_sim">
+
+     comms_sim
+
+  </description>
+  <author>nick</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/comms_sim</url>
+  <depend package="std_msgs"/>
+  <depend package="roscpp"/>
+  <depend package="vehicle_interface"/>
+  <depend package="osl_core"/>
+
+</package>
+
+
