@@ -12,6 +12,7 @@
   <depend package="roscpp"/>
   <depend package="vehicle_interface"/>
   <depend package="osl_core"/>
+  <depend package="auv_msgs"/>
 
 </package>
 
