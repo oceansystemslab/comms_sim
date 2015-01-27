@@ -53,13 +53,15 @@ void CommsNode::checkForPER(CommsMsg &msg)
 
 }
 
-CommsNode::CommsNode(std::string name, int per_type, double per, double collision_window)
+CommsNode::CommsNode(std::string name, int per_type, double per, double collision_window, ros::NodeHandlePtr nhp)
 {
   //Constructor
   name_ = name;
   per_type_ = per_type;
   per_ = per;
   collision_window_ = collision_window;
+
+  nhp_ = nhp;
 }
 
 static void CommsNode::updatePositionMap(std::string node_name, osl_core::LLD pos)

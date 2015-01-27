@@ -17,7 +17,7 @@
 
 #include <boost/random.hpp>
 #include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_01.hpp>.hpp>
+#include <boost/random/uniform_01.hpp>
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
 
@@ -47,7 +47,7 @@ class CommsNode
   void checkForMessageCollisions();
   void checkForPER(CommsMsg &msg);
 public:
-  CommsNode(std::string name, int per_type, double per, double collision_window);
+  CommsNode(std::string name, int per_type, double per, double collision_window, ros::NodeHandlePtr nhp);
   static void updatePositionMap(std::string node_name, osl_core::LLD pos);
   bool isMessageTime(ros::Time now);
   bool isMessageReceived();
