@@ -23,8 +23,11 @@ class CommsSim
 
   int per_type_;
   double per_;
+  bool use_fixed_flight_time_;
+  double flight_time_;
+  double medium_speed_;
   double collision_window_;
-  std::string platform_names_;
+  std::vector<std::string> platform_names_;
 
   void addCommsNode(std::string node_name);
   void modemOutCB(vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name);
