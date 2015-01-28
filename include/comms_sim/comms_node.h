@@ -49,11 +49,14 @@ class CommsNode
 public:
   CommsNode(std::string name, int per_type, double per, double collision_window, ros::NodeHandlePtr nhp);
   static void updatePositionMap(std::string node_name, osl_core::LLD pos);
+  static osl_core::LLD getPosition(std::string node_name);
   bool isMessageTime(ros::Time now);
   bool isMessageReceived();
   void pushMessage(CommsMsg msg);
   void publishMessage(CommsMsg msg);
+  void handleMsg();
   CommsMsg popMsg();
+  std::string getName();
 };
 
 #endif /* COMMS_NODE_H_ */

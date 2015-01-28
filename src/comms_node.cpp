@@ -58,10 +58,13 @@ CommsNode::CommsNode(std::string name, int per_type, double per, double collisio
   //Constructor
   name_ = name;
   per_type_ = per_type;
-  per_ = per;
+  per_ = per; //TODO: Add specific per for this node in launch file.
   collision_window_ = collision_window;
 
   nhp_ = nhp;
+  std::stringstream topic;
+  topic << "/" << name << "/modem/in";
+  in_pub_ = nhp_->advertise<vehicle_interface::AcousticModemPayload>(topic.str(), 10);
 }
 
 static void CommsNode::updatePositionMap(std::string node_name, osl_core::LLD pos)
@@ -78,6 +81,11 @@ static void CommsNode::updatePositionMap(std::string node_name, osl_core::LLD po
   {
     it->second = pos;
   }
+}
+
+static osl_core::LLD CommsNode::getPosition(std::string node_name)
+{
+  return node_position_map_[node_name];
 }
 
 bool CommsNode::isMessageTime(ros::Time now)
@@ -114,4 +122,18 @@ CommsMsg CommsNode::popMsg()
 void CommsNode::pushMessage(CommsMsg msg)
 {
   in_pub_.publish(*msg.getMessage());
+}
+
+std::string CommsNode::getName()
+{
+  return name_;
+}
+
+
+void CommsNode::handleMsg()
+{
+  if(isMessageReceived())
+  {
+    publishMessage(popMsg());
+  }
 }
