@@ -146,6 +146,7 @@ void CommsSim::doWork()
    * Check for each node if any message is received and process it accordingly.
    * Loop around the comms nodes, check if it is time to receive a message, and decide if you receive it.
    */
+  ros::spinOnce();
   std::vector<CommsNode>::iterator it;
   for(it = node_list_.begin(); it != node_list_.end(); it++)
   {
