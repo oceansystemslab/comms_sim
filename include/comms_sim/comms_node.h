@@ -31,10 +31,10 @@ class CommsNode
   std::string name_;
   static std::map<std::string, osl_core::LLD> node_position_map_;
   ros::Time last_transmission_time_;
-  double per_ = 0;
-  int per_type_ = 0;
+  int per_type_;
+  double per_;
 
-  double collision_window_ = 0.5; //How much time does the modem take to listen and process the message in seconds. This is transmission length plus processing time.
+  double collision_window_; //How much time does the modem take to listen and process the message in seconds. This is transmission length plus processing time.
 
   static boost::mt19937 rng;//TODO: Should add seed.
   static boost::uniform_01<boost::mt19937> generator;// TODO: check if numbers are generated properly

@@ -9,8 +9,9 @@
 #include <comms_sim/comms_node.h>
 
 std::map<std::string, osl_core::LLD> CommsNode::node_position_map_;
-boost::mt19937 CommsNode::rng();
+boost::mt19937 CommsNode::rng;
 boost::uniform_01<boost::mt19937> CommsNode::generator(rng);
+
 //boost::uniform_real<> CommsNode::dist(0.0,1.0);
 //boost::variate_generator<boost::mt19937&,boost::uniform_real< > > CommsNode::generate(rng,dist);
 
@@ -24,7 +25,7 @@ void CommsNode::checkForMessageCollisions()
   {
     for(it2 = it1+1; it2 != msg_queue_.end(); it2++)
     {
-      if((it1->getDeliveryTime() - it2->getDeliveryTime()) < collision_window_)
+      if((it1->getDeliveryTime() - it2->getDeliveryTime()) < ros::Duration(collision_window_))
       {
         it1->setErrorStatus(true);
         it2->setErrorStatus(true);
@@ -53,21 +54,19 @@ void CommsNode::checkForPER(CommsMsg &msg)
 
 }
 
-CommsNode::CommsNode(std::string name, int per_type, double per, double collision_window, ros::NodeHandlePtr nhp)
+CommsNode::CommsNode(std::string name, int per_type, double per,
+												double collision_window, ros::NodeHandlePtr nhp)
+	: name_(name), per_type_(per_type), per_(per),
+		collision_window_(collision_window), nhp_(nhp)
 {
-  //Constructor
-  name_ = name;
-  per_type_ = per_type;
-  per_ = per; //TODO: Add specific per for this node in launch file.
-  collision_window_ = collision_window;
+	//TODO: Add specific per for this node in launch file.
 
-  nhp_ = nhp;
   std::stringstream topic;
   topic << "/" << name << "/modem/in";
   in_pub_ = nhp_->advertise<vehicle_interface::AcousticModemPayload>(topic.str(), 10);
 }
 
-static void CommsNode::updatePositionMap(std::string node_name, osl_core::LLD pos)
+void CommsNode::updatePositionMap(std::string node_name, osl_core::LLD pos)
 {
   //Static method that updates the position of a vehicle in the node_position_map_
   std::map<std::string, osl_core::LLD>::iterator it;
@@ -83,7 +82,7 @@ static void CommsNode::updatePositionMap(std::string node_name, osl_core::LLD po
   }
 }
 
-static osl_core::LLD CommsNode::getPosition(std::string node_name)
+osl_core::LLD CommsNode::getPosition(std::string node_name)
 {
   return node_position_map_[node_name];
 }
@@ -119,7 +118,7 @@ CommsMsg CommsNode::popMsg()
   return ret;
 }
 
-void CommsNode::pushMessage(CommsMsg msg)
+void CommsNode::publishMessage(CommsMsg msg)
 {
   in_pub_.publish(*msg.getMessage());
 }

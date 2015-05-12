@@ -19,20 +19,23 @@ class CommsMsg
 {
   ros::Time transmission_time_;
   ros::Time delivery_time_;
-  vehicle_interface::AcousticModemPayloadPtr msg_ptr_;
+  vehicle_interface::AcousticModemPayloadConstPtr msg_ptr_;
   std::string sender_;
   std::string receiver_;
+
   bool error_sts_;
+
 public:
-  CommsMsg(vehicle_interface::AcousticModemPayloadPtr msg_ptr, ros::Time transmission_time, ros::Time delivery_time,
+  CommsMsg(vehicle_interface::AcousticModemPayloadConstPtr msg_ptr, ros::Time transmission_time, ros::Time delivery_time,
            std::string sender, std::string receiver, bool status);
+
   bool getErrorStatus();
   void setErrorStatus(bool status);
   std::string getSender();
   std::string getReceiver();
   ros::Time getDeliveryTime();
   ros::Time getTransmissionTime();
-  vehicle_interface::AcousticModemPayloadPtr getMessage();
+  vehicle_interface::AcousticModemPayloadConstPtr getMessage();
 };
 
 #endif /* COMMS_MSG_H_ */

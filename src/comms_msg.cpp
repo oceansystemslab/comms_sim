@@ -7,16 +7,13 @@
 
 #include <comms_sim/comms_msg.h>
 
-CommsMsg::CommsMsg(vehicle_interface::AcousticModemPayloadPtr msg_ptr, ros::Time transmission_time,
+CommsMsg::CommsMsg(vehicle_interface::AcousticModemPayloadConstPtr msg_ptr, ros::Time transmission_time,
                    ros::Time delivery_time, std::string sender, std::string receiver, bool status)
+	: msg_ptr_(msg_ptr), transmission_time_(transmission_time), delivery_time_(delivery_time),
+    sender_(sender), receiver_(receiver), error_sts_(status)
 {
-  msg_ptr_ = msg_ptr;
-  transmission_time_ = transmission_time;
-  delivery_time_ = delivery_time;
-  sender_ = sender;
-  receiver_ = receiver;
-  error_sts_ = status;
 }
+
 
 bool CommsMsg::getErrorStatus()
 {
@@ -48,7 +45,7 @@ ros::Time CommsMsg::getTransmissionTime()
   return transmission_time_;
 }
 
-vehicle_interface::AcousticModemPayloadPtr CommsMsg::getMessage()
+vehicle_interface::AcousticModemPayloadConstPtr CommsMsg::getMessage()
 {
   return msg_ptr_;
 }

@@ -7,7 +7,7 @@
 
 #include <comms_sim/comms_sim.h>
 
-int int main(int argc, char **argv)
+int main(int argc, char **argv)
 {
   cout << "Initialising ROS with args: " << endl;
   for (int i = 0; i < argc; ++i)

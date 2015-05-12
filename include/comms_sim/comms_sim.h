@@ -30,8 +30,8 @@ class CommsSim
   std::vector<std::string> platform_names_;
 
   void addCommsNode(std::string node_name);
-  void modemOutCB(vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name);
-  void navStsOutCB(auv_msgs::NavSts::ConstPtr &msg, std::string node_name);
+  void modemOutCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name);
+  void navStsOutCB(const auv_msgs::NavSts::ConstPtr &msg, std::string node_name);
 public:
   CommsSim(ros::NodeHandlePtr nhp);
   bool init();

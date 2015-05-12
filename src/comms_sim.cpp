@@ -6,6 +6,7 @@
  */
 
 #include <comms_sim/comms_sim.h>
+#include <boost/bind.hpp>
 
 double findDistance(osl_core::T_LLD a, osl_core::T_LLD b)
 {
@@ -33,14 +34,18 @@ void CommsSim::addCommsNode(std::string node_name)
   node_list_.push_back(CommsNode(node_name, per_type_, per_, collision_window_, nhp_));
   std::stringstream topic;
   topic << "/" << node_name << "/modem/out";
-  modem_sub_v_.push_back(
-      nhp_->subscribe<vehicle_interface::AcousticModemPayload>(topic.str(), 1, boost::bind(modemOutCB, _1, node_name)));
+  const boost::function< void(const boost::shared_ptr< vehicle_interface::AcousticModemPayload const > &) >
+  			cb = boost::bind(&CommsSim::modemOutCB, this, _1, node_name);
+  modem_sub_v_.push_back( nhp_->subscribe(topic.str(), 1,	cb) );
   topic.clear();
+
   topic << "/" << node_name << "/nav/nav_sts";
-  nav_sub_v_.push_back(nhp_->subscribe<auv_msgs::NavSts>(topic.str(), 1, boost::bind(navStsOutCB, _1, node_name)));
+  const boost::function< void(const boost::shared_ptr< auv_msgs::NavSts const > &) >
+  			cb2 = boost::bind(&CommsSim::navStsOutCB, this, _1, node_name);
+  nav_sub_v_.push_back( nhp_->subscribe<auv_msgs::NavSts>(topic.str(), 1, cb2) );
 }
 
-void CommsSim::modemOutCB(vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name)
+void CommsSim::modemOutCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name)
 {
   //Here we receive a message from the node with node_name. We should put the message to all the other nodes' queues.
   std::vector<CommsNode>::iterator it;
@@ -65,7 +70,7 @@ void CommsSim::modemOutCB(vehicle_interface::AcousticModemPayload::ConstPtr &msg
   }
 }
 
-void CommsSim::navStsOutCB(auv_msgs::NavSts::ConstPtr &msg, std::string node_name)
+void CommsSim::navStsOutCB(const auv_msgs::NavSts::ConstPtr &msg, std::string node_name)
 {
   //Here we receive position update from the node with node_name. We should update it in the appropriate map.
   osl_core::LLD pos;
@@ -136,7 +141,7 @@ bool CommsSim::init()
     addCommsNode(*it);
   }
 
-
+  return true;
 }
 
 void CommsSim::doWork()
