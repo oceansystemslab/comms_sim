@@ -89,6 +89,10 @@ osl_core::LLD CommsNode::getPosition(std::string node_name)
 
 bool CommsNode::isMessageTime(ros::Time now)
 {
+	if (msg_queue_.empty())
+	{
+		return false;
+	}
   //Compare the current time with the first message time of arrival and return if it is time to receive the message.
   if(abs((msg_queue_[0].getDeliveryTime() - now).toSec()) < 0.005) //Todo: Check this number.
   {

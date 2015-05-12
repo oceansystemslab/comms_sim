@@ -27,8 +27,8 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 
-rosbuild_add_executable(commsimm src/comms_sim_main.cpp
-                                 src/comms_sim.cpp
-                                 src/comms_node.cpp
-                                 src/comms_msg.cpp)
+rosbuild_add_executable(commsim src/comms_sim_main.cpp
+                                src/comms_sim.cpp
+                                src/comms_node.cpp
+                                src/comms_msg.cpp)
 #target_link_libraries(example ${PROJECT_NAME})

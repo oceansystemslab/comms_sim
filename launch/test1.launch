@@ -1,0 +1,26 @@
+<launch>
+
+  <param name="/time_scale" value="1"/>
+  <param name="/time_start_sec" value="1000"/>
+  <param name="/time_start_nsec" value="0"/>
+  <param name="/time_free_running" value="true"/>
+  <param name="/clock_publish_rate" value="100.0"/>
+  <node pkg="sim_clock" name="sim_clock" type="sim_clock"/>
+
+  
+  
+  <param name="sim/per_type" value="5"/>
+  <param name="sim/per" value="0"/>  
+  <param name="sim/collision_window" value="0"/>
+  
+  <param name="sim/use_fixed_flight_time" value="true"/>
+  <param name="sim/flight_time" value="2000"/>
+  
+  <param name="sim/platform_names" value="sauv1 iauv1"/>
+  
+  <param name="sim/meduim_speed" value="0.5"/>
+  
+  
+  <node pkg="comms_sim" name="comm_sim" type="commsim" output="screen"/>    
+  
+</launch>

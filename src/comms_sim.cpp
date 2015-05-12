@@ -43,6 +43,9 @@ void CommsSim::addCommsNode(std::string node_name)
   const boost::function< void(const boost::shared_ptr< auv_msgs::NavSts const > &) >
   			cb2 = boost::bind(&CommsSim::navStsOutCB, this, _1, node_name);
   nav_sub_v_.push_back( nhp_->subscribe<auv_msgs::NavSts>(topic.str(), 1, cb2) );
+
+
+  std::cout << "added node " << node_name << std::endl;
 }
 
 void CommsSim::modemOutCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name)
@@ -151,6 +154,9 @@ void CommsSim::doWork()
    * Check for each node if any message is received and process it accordingly.
    * Loop around the comms nodes, check if it is time to receive a message, and decide if you receive it.
    */
+
+  //std::cout << "doWork(), list size = " << node_list_.size() << std::endl;
+
   ros::spinOnce();
   std::vector<CommsNode>::iterator it;
   for(it = node_list_.begin(); it != node_list_.end(); it++)
