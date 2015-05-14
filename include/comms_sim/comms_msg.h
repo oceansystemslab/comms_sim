@@ -22,17 +22,22 @@ class CommsMsg
   vehicle_interface::AcousticModemPayloadConstPtr msg_ptr_;
   std::string sender_;
   std::string receiver_;
+  std::string type_;
 
   bool error_sts_;
 
 public:
-  CommsMsg(vehicle_interface::AcousticModemPayloadConstPtr msg_ptr, ros::Time transmission_time, ros::Time delivery_time,
-           std::string sender, std::string receiver, bool status);
+  CommsMsg(vehicle_interface::AcousticModemPayloadConstPtr msg_ptr, ros::Time transmission_time,
+           ros::Time delivery_time, std::string sender, std::string receiver, bool status, std::string type);
+  CommsMsg()
+  {
+  }
 
   bool getErrorStatus();
   void setErrorStatus(bool status);
   std::string getSender();
   std::string getReceiver();
+  std::string getType();
   ros::Time getDeliveryTime();
   ros::Time getTransmissionTime();
   vehicle_interface::AcousticModemPayloadConstPtr getMessage();
