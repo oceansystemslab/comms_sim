@@ -42,7 +42,8 @@ class CommsNode
 //  static boost::variate_generator<boost::mt19937&, boost::uniform_real< > > generate;
 
   ros::NodeHandlePtr nhp_;
-  ros::Publisher in_pub_;
+  ros::Publisher in_burst_pub_;
+  ros::Publisher in_im_pub_;
 
   void checkForMessageCollisions();
   void checkForPER(CommsMsg &msg);
@@ -54,7 +55,7 @@ public:
   bool isMessageReceived();
   void pushMessage(CommsMsg msg);
   void publishMessage(CommsMsg msg);
-  void handleMsg();
+  bool handleMsg(CommsMsg &msg);
   CommsMsg popMsg();
   std::string getName();
 };

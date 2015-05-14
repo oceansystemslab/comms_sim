@@ -62,8 +62,12 @@ CommsNode::CommsNode(std::string name, int per_type, double per,
 	//TODO: Add specific per for this node in launch file.
 
   std::stringstream topic;
-  topic << "/" << name << "/modem/in";
-  in_pub_ = nhp_->advertise<vehicle_interface::AcousticModemPayload>(topic.str(), 10);
+  topic << "/" << name << "/modem/burst/in";
+  in_burst_pub_ = nhp_->advertise<vehicle_interface::AcousticModemPayload>(topic.str(), 10);
+  topic.clear();
+
+  topic << "/" << name << "/modem/im/in";
+  in_im_pub_ = nhp_->advertise<vehicle_interface::AcousticModemPayload>(topic.str(), 10);
 }
 
 void CommsNode::updatePositionMap(std::string node_name, osl_core::LLD pos)
@@ -124,7 +128,12 @@ CommsMsg CommsNode::popMsg()
 
 void CommsNode::publishMessage(CommsMsg msg)
 {
-  in_pub_.publish(*msg.getMessage());
+  if(msg.getType() == "Burst")
+    in_burst_pub_.publish(*msg.getMessage());
+  else if(msg.getType() == "IM")
+    in_im_pub_.publish(*msg.getMessage());
+  else
+    ROS_ERROR_STREAM("Could not recognise a valid message type");
 }
 
 std::string CommsNode::getName()
@@ -133,10 +142,13 @@ std::string CommsNode::getName()
 }
 
 
-void CommsNode::handleMsg()
+bool CommsNode::handleMsg(CommsMsg &msg)
 {
+  msg = popMsg();
   if(isMessageReceived())
   {
-    publishMessage(popMsg());
+    publishMessage(msg);
+    return true;
   }
+  return false;
 }
