@@ -12,13 +12,20 @@
 #include <ros/ros.h>
 #include <auv_msgs/NavSts.h>
 #include <boost/algorithm/string.hpp>
+#include <vehicle_interface/AcousticModemAck.h>
 
 class CommsSim
 {
+  boost::mt19937 rng;//TODO: Should add seed.
+  boost::uniform_01<boost::mt19937> zeroone;
+  //boost::variate_generator<boost::mt19937, boost::uniform_01<> > gen(rng, zeroone);
+
   std::vector<CommsNode> node_list_;
-  std::vector<ros::Subscriber> modem_sub_v_;
+  std::vector<ros::Subscriber> modem_burst_sub_v_;
+  std::vector<ros::Subscriber> modem_im_sub_v_;
   std::vector<ros::Subscriber> nav_sub_v_;
-  std::map<std::string, ros::Publisher> pub_m_;
+  std::map<std::string, ros::Publisher> burst_ack_pub_m_;
+  std::map<std::string, ros::Publisher> im_ack_pub_m_;
   ros::NodeHandlePtr nhp_;
 
   int per_type_;
@@ -30,8 +37,11 @@ class CommsSim
   std::vector<std::string> platform_names_;
 
   void addCommsNode(std::string node_name);
-  void modemOutCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name);
+  void modemOutBurstCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name);
+  void modemOutIMCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name);
   void navStsOutCB(const auv_msgs::NavSts::ConstPtr &msg, std::string node_name);
+  bool isAckReceived();
+  void publishAckMsg(CommsMsg msg, bool ackReceived);
 public:
   CommsSim(ros::NodeHandlePtr nhp);
   bool init();
