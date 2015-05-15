@@ -13,6 +13,7 @@
 #include <auv_msgs/NavSts.h>
 #include <boost/algorithm/string.hpp>
 #include <vehicle_interface/AcousticModemAck.h>
+#include <sstream>
 
 class CommsSim
 {
@@ -35,13 +36,16 @@ class CommsSim
   double medium_speed_;
   double collision_window_;
   std::vector<std::string> platform_names_;
+  std::vector<int> platform_ids_;
 
-  void addCommsNode(std::string node_name);
+  void addCommsNode(std::string node_name, int id);
   void modemOutBurstCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name);
   void modemOutIMCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name);
   void navStsOutCB(const auv_msgs::NavSts::ConstPtr &msg, std::string node_name);
   bool isAckReceived();
   void publishAckMsg(CommsMsg msg, bool ackReceived);
+  ros::Time calculateDeliveryTime(std::string n1, std::string n2, ros::Time transmission_time);
+  vehicle_interface::AcousticModemAckPtr generateAckMsg(unsigned int msg_id, bool ack);
 public:
   CommsSim(ros::NodeHandlePtr nhp);
   bool init();

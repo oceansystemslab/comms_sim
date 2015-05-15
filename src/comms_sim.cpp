@@ -28,10 +28,10 @@ double findDistance(osl_core::T_LLD a, osl_core::T_LLD b)
   return sqrt(distance);
 }
 
-void CommsSim::addCommsNode(std::string node_name)
+void CommsSim::addCommsNode(std::string node_name, int id)
 {
   // Create all the infrastructure for the comms node (Publishers, subscribers, class etc.)
-  node_list_.push_back(CommsNode(node_name, per_type_, per_, collision_window_, nhp_));
+  node_list_.push_back(CommsNode(node_name, id, per_type_, per_, collision_window_, nhp_));
   std::stringstream topic;
   topic << "/" << node_name << "/modem/burst/out";
   const boost::function<void(const boost::shared_ptr<vehicle_interface::AcousticModemPayload const> &)> cb =
@@ -70,23 +70,21 @@ void CommsSim::modemOutBurstCB(const vehicle_interface::AcousticModemPayload::Co
 {
   //Here we receive a message from the node with node_name. We should put the message to all the other nodes' queues.
   std::vector<CommsNode>::iterator it;
+  vehicle_interface::AcousticModemPayloadPtr payload_msg(new vehicle_interface::AcousticModemPayload);
+  payload_msg->header = msg->header;
+  payload_msg->ack = msg->ack;
+  payload_msg->address = msg->address;
+  payload_msg->msg_id = msg->msg_id;
+  payload_msg->payload = msg->payload;
   for (it = node_list_.begin(); it != node_list_.end(); it++)
   {
     //Handle incoming message.
     if (it->getName() != node_name) //We don't want to hear ourselves.
     {
       ros::Time transmission_time = ros::Time::now();
-      ros::Time delivery_time;
-      if (use_fixed_flight_time_)
-      {
-        delivery_time = transmission_time + ros::Duration(flight_time_);
-      }
-      else
-      {
-        double distance = findDistance(CommsNode::getPosition(node_name), CommsNode::getPosition(it->getName()));
-        delivery_time = transmission_time + ros::Duration(distance / medium_speed_);
-      }
-      it->pushMessage(CommsMsg(msg, transmission_time, delivery_time, node_name, it->getName(), false, "Burst"));
+      ros::Time delivery_time = calculateDeliveryTime(node_name, it->getName(), transmission_time);
+      it->pushMessage(
+          CommsMsg(payload_msg, transmission_time, delivery_time, node_name, it->getName(), false, "Burst"));
     }
   }
 }
@@ -95,23 +93,20 @@ void CommsSim::modemOutIMCB(const vehicle_interface::AcousticModemPayload::Const
 {
   //Here we receive a message from the node with node_name. We should put the message to all the other nodes' queues.
   std::vector<CommsNode>::iterator it;
+  vehicle_interface::AcousticModemPayloadPtr payload_msg(new vehicle_interface::AcousticModemPayload);
+  payload_msg->header = msg->header;
+  payload_msg->ack = msg->ack;
+  payload_msg->address = msg->address;
+  payload_msg->msg_id = msg->msg_id;
+  payload_msg->payload = msg->payload;
   for (it = node_list_.begin(); it != node_list_.end(); it++)
   {
     //Handle incoming message.
     if (it->getName() != node_name) //We don't want to hear ourselves.
     {
       ros::Time transmission_time = ros::Time::now();
-      ros::Time delivery_time;
-      if (use_fixed_flight_time_)
-      {
-        delivery_time = transmission_time + ros::Duration(flight_time_);
-      }
-      else
-      {
-        double distance = findDistance(CommsNode::getPosition(node_name), CommsNode::getPosition(it->getName()));
-        delivery_time = transmission_time + ros::Duration(distance / medium_speed_);
-      }
-      it->pushMessage(CommsMsg(msg, transmission_time, delivery_time, node_name, it->getName(), false, "IM"));
+      ros::Time delivery_time = calculateDeliveryTime(node_name, it->getName(), transmission_time);
+      it->pushMessage(CommsMsg(payload_msg, transmission_time, delivery_time, node_name, it->getName(), false, "IM"));
     }
   }
 }
@@ -154,6 +149,27 @@ void CommsSim::publishAckMsg(CommsMsg msg, bool ackReceived)
     ROS_ERROR_STREAM("Could not recognise a valid message type");
 }
 
+ros::Time CommsSim::calculateDeliveryTime(std::string n1, std::string n2, ros::Time transmission_time)
+{
+  if (use_fixed_flight_time_)
+  {
+    return transmission_time + ros::Duration(flight_time_);
+  }
+  else
+  {
+    double distance = findDistance(CommsNode::getPosition(n1), CommsNode::getPosition(n2));
+    return transmission_time + ros::Duration(distance / medium_speed_);
+  }
+}
+
+vehicle_interface::AcousticModemAckPtr CommsSim::generateAckMsg(unsigned int msg_id, bool ack)
+{
+  vehicle_interface::AcousticModemAckPtr msg(new vehicle_interface::AcousticModemAck());
+  msg->ack = ack;
+  msg->msg_id = msg_id;
+  return msg;
+}
+
 CommsSim::CommsSim(ros::NodeHandlePtr nhp) :
     zeroone(rng)
 {
@@ -167,6 +183,14 @@ bool CommsSim::init()
   if (!nhp_->getParam("sim/platform_names", nodes))
   {
     ROS_ERROR_STREAM("Didn't find platform names. Exiting...");
+    return false;
+  }
+
+  std::string ids;
+
+  if (!nhp_->getParam("sim/platform_modem_ids", ids))
+  {
+    ROS_ERROR_STREAM("Didn't find platform modem ids. Exiting...");
     return false;
   }
 
@@ -206,14 +230,33 @@ bool CommsSim::init()
     return false;
   }
 
+  std::stringstream ss(ids);
+  int n;
+  while (ss >> n)
+  {
+    platform_ids_.push_back(n);
+  }
+
   //Here we create each of the comms_node instances
   boost::split(platform_names_, nodes, boost::is_any_of("\t "));
 
   std::vector<std::string>::iterator it;
+  int index = 0;
+  int id;
   for (it = platform_names_.begin(); it != platform_names_.end(); it++)
   {
     //Create all the classes here.
-    addCommsNode(*it);
+    try
+    {
+      id = platform_ids_.at(index);
+    }
+    catch (const std::out_of_range& oor)
+    {
+      std::cerr << "Out of Range error: " << oor.what() << '\n';
+      return false;
+    }
+    addCommsNode(*it, id);
+    index++;
   }
 
   return true;
@@ -237,64 +280,31 @@ void CommsSim::doWork()
       CommsMsg msg;
       bool received;
       received = it->handleMsg(msg);
-      if (received)
+      if (!(msg.getType() == "BurstAck" || msg.getType() == "IMAck")) //We don't ack other acks
       {
-        /*
-         * If message received check if it requires to be acked.
-         * If yes check if ack is properly delivered (with a per check).
-         */
         if (msg.getMessage()->ack == true)
         {
           if (msg.getMessage()->address != 255) //Broadcast messages won't be acked even if they request an ack.
           {
-            /*if (isAckReceived())
+            vehicle_interface::AcousticModemAckPtr ack_msg = generateAckMsg(msg.getMessage()->msg_id, received);
+            ros::Time transmission_time = ros::Time::now();
+            ros::Time delivery_time = calculateDeliveryTime(msg.getSender(), msg.getReceiver(), transmission_time);
+            std::vector<CommsNode>::iterator it;
+            for (it = node_list_.begin(); it != node_list_.end(); it++)
             {
-              vehicle_interface::AcousticModemAck ack;
-              ack.ack = true;
-              ack.msg_id = msg.getMessage()->msg_id;
-              if (msg.getType() == "Burst")
-                burst_ack_pub_m_[msg.getSender()].publish(ack);
-              else if (msg.getType() == "IM")
-                im_ack_pub_m_[msg.getSender()].publish(ack);
-              else
-                ROS_ERROR_STREAM("Could not recognise a valid message type");
+              if (it->getName() == msg.getSender()) //We publish the ack to the sender of the message
+              {
+                if (msg.getType() == "Burst")
+                  it->pushMessage(
+                      CommsMsg(ack_msg, transmission_time, delivery_time, msg.getReceiver(), msg.getSender(), false,
+                               "BurstAck"));
+                else if (msg.getType() == "IM")
+                  it->pushMessage(
+                      CommsMsg(ack_msg, transmission_time, delivery_time, msg.getReceiver(), msg.getSender(), false,
+                               "IMAck"));
+                break;
+              }
             }
-            else
-            {
-              vehicle_interface::AcousticModemAck ack;
-              ack.ack = false;
-              ack.msg_id = msg.getMessage()->msg_id;
-              if (msg.getType() == "Burst")
-                burst_ack_pub_m_[msg.getSender()].publish(ack);
-              else if (msg.getType() == "IM")
-                im_ack_pub_m_[msg.getSender()].publish(ack);
-              else
-                ROS_ERROR_STREAM("Could not recognise a valid message type");
-            }*/
-            publishAckMsg(msg, isAckReceived());
-          }
-        }
-      }
-      else
-      {
-        /*
-         * If message not received check if it requires to be acked.
-         * If yes publish a failed ack.
-         */
-        if (msg.getMessage()->ack == true)
-        {
-          if (msg.getMessage()->address != 255) //Broadcast messages won't be acked even if they request an ack.
-          {
-            /*vehicle_interface::AcousticModemAck ack;
-            ack.ack = false;
-            ack.msg_id = msg.getMessage()->msg_id;
-            if (msg.getType() == "Burst")
-              burst_ack_pub_m_[msg.getSender()].publish(ack);
-            else if (msg.getType() == "IM")
-              im_ack_pub_m_[msg.getSender()].publish(ack);
-            else
-              ROS_ERROR_STREAM("Could not recognise a valid message type");*/
-            publishAckMsg(msg, false);
           }
         }
       }
