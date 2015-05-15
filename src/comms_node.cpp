@@ -5,7 +5,6 @@
  *      Author: nick
  */
 
-
 #include <comms_sim/comms_node.h>
 
 std::map<std::string, osl_core::LLD> CommsNode::node_position_map_;
@@ -21,17 +20,18 @@ void CommsNode::checkForMessageCollisions()
   std::deque<CommsMsg>::iterator it1;
   std::deque<CommsMsg>::iterator it2;
 
-  for(it1 = msg_queue_.begin(); it1 != msg_queue_.end(); it1++)
+  for (it1 = msg_queue_.begin(); it1 != msg_queue_.end(); it1++)
   {
-    for(it2 = it1+1; it2 != msg_queue_.end(); it2++)
+    for (it2 = it1 + 1; it2 != msg_queue_.end(); it2++)
     {
-      if((it1->getDeliveryTime() - it2->getDeliveryTime()) < ros::Duration(collision_window_))
+      if ((it1->getDeliveryTime() - it2->getDeliveryTime()) < ros::Duration(collision_window_))
       {
         it1->setErrorStatus(true);
         it2->setErrorStatus(true);
       }
       //Check for the case the transmission of my last message was concurrent with any message received.
-      if((it1->getTransmissionTime() <= last_transmission_time_)&&(last_transmission_time_ <= it1->getDeliveryTime()))
+      if ((it1->getTransmissionTime() <= last_transmission_time_)
+          && (last_transmission_time_ <= it1->getDeliveryTime()))
       {
         it1->setErrorStatus(true);
       }
@@ -43,9 +43,9 @@ void CommsNode::checkForPER(CommsMsg &msg)
 {
   //Check if the packet arrives correctly.
   double rndNum = generator();
-  if(per_type_ == 0)
+  if (per_type_ == 0)
   {
-    if(rndNum < per_)
+    if (rndNum < per_)
     {
       msg.setErrorStatus(true);
     }
@@ -54,12 +54,10 @@ void CommsNode::checkForPER(CommsMsg &msg)
 
 }
 
-CommsNode::CommsNode(std::string name, int per_type, double per,
-												double collision_window, ros::NodeHandlePtr nhp)
-	: name_(name), per_type_(per_type), per_(per),
-		collision_window_(collision_window), nhp_(nhp)
+CommsNode::CommsNode(std::string name, int id, int per_type, double per, double collision_window, ros::NodeHandlePtr nhp) :
+    name_(name), id_(id), per_type_(per_type), per_(per), collision_window_(collision_window), nhp_(nhp)
 {
-	//TODO: Add specific per for this node in launch file.
+  //TODO: Add specific per for this node in launch file.
 
   std::stringstream topic;
   topic << "/" << name << "/modem/burst/in";
@@ -68,6 +66,15 @@ CommsNode::CommsNode(std::string name, int per_type, double per,
 
   topic << "/" << name << "/modem/im/in";
   in_im_pub_ = nhp_->advertise<vehicle_interface::AcousticModemPayload>(topic.str(), 10);
+  topic.clear();
+
+  topic << "/" << name << "/modem/burst/ack";
+  ack_burst_pub_ = nhp_->advertise<vehicle_interface::AcousticModemAck>(topic.str(), 10);
+  topic.clear();
+
+  topic << "/" << name << "/modem/im/ack";
+  ack_im_pub_ = nhp_->advertise<vehicle_interface::AcousticModemAck>(topic.str(), 10);
+  topic.clear();
 }
 
 void CommsNode::updatePositionMap(std::string node_name, osl_core::LLD pos)
@@ -75,10 +82,10 @@ void CommsNode::updatePositionMap(std::string node_name, osl_core::LLD pos)
   //Static method that updates the position of a vehicle in the node_position_map_
   std::map<std::string, osl_core::LLD>::iterator it;
   it = node_position_map_.find(node_name);
-  if(it == node_position_map_.end())
+  if (it == node_position_map_.end())
   {
     //Node doesn't exist, so insert it.
-    node_position_map_.insert(std::pair<std::string, osl_core::LLD>(node_name,pos));
+    node_position_map_.insert(std::pair<std::string, osl_core::LLD>(node_name, pos));
   }
   else
   {
@@ -93,12 +100,12 @@ osl_core::LLD CommsNode::getPosition(std::string node_name)
 
 bool CommsNode::isMessageTime(ros::Time now)
 {
-	if (msg_queue_.empty())
-	{
-		return false;
-	}
+  if (msg_queue_.empty())
+  {
+    return false;
+  }
   //Compare the current time with the first message time of arrival and return if it is time to receive the message.
-  if(abs((msg_queue_[0].getDeliveryTime() - now).toSec()) < 0.005) //Todo: Check this number.
+  if (abs((msg_queue_[0].getDeliveryTime() - now).toSec()) < 0.005) //Todo: Check this number.
   {
     return true;
   }
@@ -126,12 +133,34 @@ CommsMsg CommsNode::popMsg()
   return ret;
 }
 
+vehicle_interface::AcousticModemPayload CommsNode::generatePayloadMsg(vehicle_interface::AcousticModemPayloadPtr msg)
+{
+  vehicle_interface::AcousticModemPayload payload_msg;
+  payload_msg.header.stamp = ros::Time::now();
+  payload_msg.address = msg->address;
+  payload_msg.payload = msg->payload;
+  return payload_msg;
+}
+
+vehicle_interface::AcousticModemAck CommsNode::generateAckMsg(vehicle_interface::AcousticModemAckPtr msg)
+{
+  vehicle_interface::AcousticModemAck ack_msg;
+  ack_msg.header.stamp = ros::Time::now();
+  ack_msg.msg_id = msg->msg_id;
+  ack_msg.ack = msg->ack;
+  return ack_msg;
+}
+
 void CommsNode::publishMessage(CommsMsg msg)
 {
-  if(msg.getType() == "Burst")
-    in_burst_pub_.publish(*msg.getMessage());
-  else if(msg.getType() == "IM")
-    in_im_pub_.publish(*msg.getMessage());
+  if (msg.getType() == "Burst")
+    in_burst_pub_.publish(generatePayloadMsg(msg.getMessage()));
+  else if (msg.getType() == "IM")
+    in_im_pub_.publish(generatePayloadMsg(msg.getMessage()));
+  else if (msg.getType() == "BurstAck")
+    ack_burst_pub_.publish(generateAckMsg(msg.getAck()));
+  else if (msg.getType() == "IMAck")
+    ack_im_pub_.publish(generateAckMsg(msg.getAck()));
   else
     ROS_ERROR_STREAM("Could not recognise a valid message type");
 }
@@ -141,14 +170,22 @@ std::string CommsNode::getName()
   return name_;
 }
 
-
 bool CommsNode::handleMsg(CommsMsg &msg)
 {
   msg = popMsg();
-  if(isMessageReceived())
+  if (isMessageReceived())
   {
     publishMessage(msg);
     return true;
+  }
+  else
+  {
+    if (msg.getType() == "BurstAck" || msg.getType() == "IMAck") //If the message is not received and it is an ack we consider the message failed.
+    {
+      msg.getAck()->ack = false;
+      publishMessage(msg);
+      return false;
+    }
   }
   return false;
 }
