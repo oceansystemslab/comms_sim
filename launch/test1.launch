@@ -17,6 +17,7 @@
   <param name="sim/flight_time" value="2000"/>
   
   <param name="sim/platform_names" value="sauv1 iauv1"/>
+  <param name="sim/platform_modem_ids" value="1 2"/>
   
   <param name="sim/meduim_speed" value="0.5"/>
   
