@@ -3,7 +3,6 @@
  *
  *  Created on: 22 Jan 2015
  *      Author: nick
- * TEST COMMENT
  */
 
 #include <comms_sim/comms_sim.h>
@@ -95,7 +94,7 @@ void CommsSim::modemOutIMCB(const vehicle_interface::AcousticModemPayloadConstPt
 {
   //Here we receive a message from the node with node_name. We should put the message to all the other nodes' queues.
   ROS_ERROR_STREAM("Node: " << node_name << " published a message at: " << ros::Time::now());
-  ROS_INFO_STREAM("Ack: " << msg->ack << " address: " << msg->address << " id: " << msg->msg_id);
+  ROS_INFO_STREAM("Ack: " << (msg->ack ? "true" : "false") << " address: " << (int) msg->address << " id: " << msg->msg_id);
   std::vector<CommsNode>::iterator it;
   vehicle_interface::AcousticModemPayloadPtr payload_msg(new vehicle_interface::AcousticModemPayload());
   payload_msg->header = msg->header;
@@ -103,7 +102,7 @@ void CommsSim::modemOutIMCB(const vehicle_interface::AcousticModemPayloadConstPt
   payload_msg->address = msg->address;
   payload_msg->msg_id = msg->msg_id;
   payload_msg->payload = msg->payload;
-  ROS_INFO_STREAM("Ack: " << payload_msg->ack << " address: " << payload_msg->address << " id: " << payload_msg->msg_id);
+  ROS_INFO_STREAM("Ack: " << (payload_msg->ack ? "true" : "false")  << " address: " << (int) payload_msg->address << " id: " << payload_msg->msg_id);
   for (it = node_list_.begin(); it != node_list_.end(); it++)
   {
     //Handle incoming message.
@@ -287,20 +286,20 @@ void CommsSim::doWork()
       CommsMsg msg;
       bool received;
       received = it->handleMsg(msg);
-      ROS_INFO_STREAM("Message: " << msg.getMessage()->msg_id << " received: " << received << " from node: " << msg.getMessage()->address);
+      ROS_INFO_STREAM("Message: " << msg.getMessage()->msg_id << " received: " << received << " from node: " << (int) msg.getMessage()->address);
       if (!(msg.getType() == "BurstAck" || msg.getType() == "IMAck")) //We don't ack other acks
       {
         if (msg.getMessage()->ack == true)
         {
           if (msg.getMessage()->address != 255) //Broadcast messages won't be acked even if they request an ack.
           {
-            vehicle_interface::AcousticModemAckPtr ack_msg;// = generateAckMsg(msg.getMessage()->msg_id, received);
+            vehicle_interface::AcousticModemAckPtr ack_msg(new vehicle_interface::AcousticModemAck());// = generateAckMsg(msg.getMessage()->msg_id, received);
             ack_msg->ack = received;
             ack_msg->msg_id = msg.getMessage()->msg_id;
             ros::Time transmission_time = ros::Time::now();
             ros::Time delivery_time = calculateDeliveryTime(msg.getSender(), msg.getReceiver(), transmission_time);
             ROS_INFO_STREAM("Generating ack for: " << msg.getSender() << " with transmission time: " << transmission_time);
-            ROS_INFO_STREAM(ack_msg->ack);
+            ROS_INFO_STREAM((ack_msg->ack ? "true" : "false"));
             std::vector<CommsNode>::iterator it_ack;
             for (it_ack = node_list_.begin(); it_ack != node_list_.end(); it_ack++)
             {
