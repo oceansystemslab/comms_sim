@@ -40,7 +40,7 @@ class CommsSim
 
   void addCommsNode(std::string node_name, int id);
   void modemOutBurstCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name);
-  void modemOutIMCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name);
+  void modemOutIMCB(const vehicle_interface::AcousticModemPayloadConstPtr &msg, std::string node_name);
   void navStsOutCB(const auv_msgs::NavSts::ConstPtr &msg, std::string node_name);
   bool isAckReceived();
   void publishAckMsg(CommsMsg msg, bool ackReceived);

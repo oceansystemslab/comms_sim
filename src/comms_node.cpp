@@ -26,6 +26,7 @@ void CommsNode::checkForMessageCollisions()
     {
       if ((it1->getDeliveryTime() - it2->getDeliveryTime()) < ros::Duration(collision_window_))
       {
+        ROS_INFO_STREAM("Node: " << name_ << "Message collision for messages: " << it1->getMessage()->msg_id << " and " << it1->getMessage()->msg_id);
         it1->setErrorStatus(true);
         it2->setErrorStatus(true);
       }
@@ -47,6 +48,7 @@ void CommsNode::checkForPER(CommsMsg &msg)
   {
     if (rndNum < per_)
     {
+      ROS_INFO_STREAM("Node: " << name_ << " Message PER loss for message: " << msg.getMessage()->msg_id);
       msg.setErrorStatus(true);
     }
   }
@@ -62,19 +64,19 @@ CommsNode::CommsNode(std::string name, int id, int per_type, double per, double 
   std::stringstream topic;
   topic << "/" << name << "/modem/burst/in";
   in_burst_pub_ = nhp_->advertise<vehicle_interface::AcousticModemPayload>(topic.str(), 10);
-  topic.clear();
+  topic.str("");
 
   topic << "/" << name << "/modem/im/in";
   in_im_pub_ = nhp_->advertise<vehicle_interface::AcousticModemPayload>(topic.str(), 10);
-  topic.clear();
+  topic.str("");
 
   topic << "/" << name << "/modem/burst/ack";
   ack_burst_pub_ = nhp_->advertise<vehicle_interface::AcousticModemAck>(topic.str(), 10);
-  topic.clear();
+  topic.str("");
 
   topic << "/" << name << "/modem/im/ack";
   ack_im_pub_ = nhp_->advertise<vehicle_interface::AcousticModemAck>(topic.str(), 10);
-  topic.clear();
+  topic.str("");
 }
 
 void CommsNode::updatePositionMap(std::string node_name, osl_core::LLD pos)
@@ -128,6 +130,8 @@ void CommsNode::pushMessage(CommsMsg msg)
 CommsMsg CommsNode::popMsg()
 {
   //Remove the first message from the queue and return it.
+  if(msg_queue_.size() == 0)
+    ROS_ERROR_STREAM("Node: " << name_ << " tried to pop from empty queue!!!!");
   CommsMsg ret = msg_queue_.front();
   msg_queue_.pop_front();
   return ret;
@@ -172,15 +176,19 @@ std::string CommsNode::getName()
 
 bool CommsNode::handleMsg(CommsMsg &msg)
 {
-  msg = popMsg();
+
   if (isMessageReceived())
   {
+    msg = popMsg();
+    ROS_INFO_STREAM("Node: " << name_ << " Message received: " << msg.getMessage()->msg_id);
     publishMessage(msg);
     return true;
   }
   else
   {
-    if (msg.getType() == "BurstAck" || msg.getType() == "IMAck") //If the message is not received and it is an ack we consider the message failed.
+    //If the message is not received and it is an ack we consider the message failed.
+    msg = popMsg();
+    if (msg.getType() == "BurstAck" || msg.getType() == "IMAck")
     {
       msg.getAck()->ack = false;
       publishMessage(msg);

@@ -36,32 +36,32 @@ void CommsSim::addCommsNode(std::string node_name, int id)
   topic << "/" << node_name << "/modem/burst/out";
   const boost::function<void(const boost::shared_ptr<vehicle_interface::AcousticModemPayload const> &)> cb =
       boost::bind(&CommsSim::modemOutBurstCB, this, _1, node_name);
-  modem_burst_sub_v_.push_back(nhp_->subscribe(topic.str(), 1, cb));
-  topic.clear();
+  modem_burst_sub_v_.push_back(nhp_->subscribe<vehicle_interface::AcousticModemPayload>(topic.str(), 1, cb));
+  topic.str("");
 
   topic << "/" << node_name << "/modem/im/out";
   const boost::function<void(const boost::shared_ptr<vehicle_interface::AcousticModemPayload const> &)> cb2 =
       boost::bind(&CommsSim::modemOutIMCB, this, _1, node_name);
-  modem_im_sub_v_.push_back(nhp_->subscribe(topic.str(), 1, cb2));
-  topic.clear();
+  modem_im_sub_v_.push_back(nhp_->subscribe<vehicle_interface::AcousticModemPayload>(topic.str(), 1, cb2));
+  topic.str("");
 
   topic << "/" << node_name << "/nav/nav_sts";
   const boost::function<void(const boost::shared_ptr<auv_msgs::NavSts const> &)> cb3 = boost::bind(
       &CommsSim::navStsOutCB, this, _1, node_name);
   nav_sub_v_.push_back(nhp_->subscribe<auv_msgs::NavSts>(topic.str(), 1, cb3));
-  topic.clear();
+  topic.str("");
 
   topic << "/" << node_name << "/modem/burst/ack";
   burst_ack_pub_m_.insert(
       std::pair<std::string, ros::Publisher>(node_name,
                                              nhp_->advertise<vehicle_interface::AcousticModemAck>(topic.str(), 10)));
-  topic.clear();
+  topic.str("");
 
   topic << "/" << node_name << "/modem/im/ack";
   im_ack_pub_m_.insert(
       std::pair<std::string, ros::Publisher>(node_name,
                                              nhp_->advertise<vehicle_interface::AcousticModemAck>(topic.str(), 10)));
-  topic.clear();
+  topic.str("");
 
   std::cout << "added node " << node_name << std::endl;
 }
@@ -69,6 +69,7 @@ void CommsSim::addCommsNode(std::string node_name, int id)
 void CommsSim::modemOutBurstCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name)
 {
   //Here we receive a message from the node with node_name. We should put the message to all the other nodes' queues.
+  ROS_INFO_STREAM("Ack: " << msg->ack << " address: " << msg->address << " id: " << msg->msg_id);
   std::vector<CommsNode>::iterator it;
   vehicle_interface::AcousticModemPayloadPtr payload_msg(new vehicle_interface::AcousticModemPayload);
   payload_msg->header = msg->header;
@@ -89,16 +90,19 @@ void CommsSim::modemOutBurstCB(const vehicle_interface::AcousticModemPayload::Co
   }
 }
 
-void CommsSim::modemOutIMCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name)
+void CommsSim::modemOutIMCB(const vehicle_interface::AcousticModemPayloadConstPtr& msg, std::string node_name)
 {
   //Here we receive a message from the node with node_name. We should put the message to all the other nodes' queues.
+  ROS_ERROR_STREAM("Node: " << node_name << " published a message at: " << ros::Time::now());
+  ROS_INFO_STREAM("Ack: " << msg->ack << " address: " << msg->address << " id: " << msg->msg_id);
   std::vector<CommsNode>::iterator it;
-  vehicle_interface::AcousticModemPayloadPtr payload_msg(new vehicle_interface::AcousticModemPayload);
+  vehicle_interface::AcousticModemPayloadPtr payload_msg(new vehicle_interface::AcousticModemPayload());
   payload_msg->header = msg->header;
   payload_msg->ack = msg->ack;
   payload_msg->address = msg->address;
   payload_msg->msg_id = msg->msg_id;
   payload_msg->payload = msg->payload;
+  ROS_INFO_STREAM("Ack: " << payload_msg->ack << " address: " << payload_msg->address << " id: " << payload_msg->msg_id);
   for (it = node_list_.begin(); it != node_list_.end(); it++)
   {
     //Handle incoming message.
@@ -106,6 +110,7 @@ void CommsSim::modemOutIMCB(const vehicle_interface::AcousticModemPayload::Const
     {
       ros::Time transmission_time = ros::Time::now();
       ros::Time delivery_time = calculateDeliveryTime(node_name, it->getName(), transmission_time);
+      ROS_ERROR_STREAM("Node: " << it->getName() << " will get the message at: " << delivery_time);
       it->pushMessage(CommsMsg(payload_msg, transmission_time, delivery_time, node_name, it->getName(), false, "IM"));
     }
   }
@@ -153,7 +158,7 @@ ros::Time CommsSim::calculateDeliveryTime(std::string n1, std::string n2, ros::T
 {
   if (use_fixed_flight_time_)
   {
-    return transmission_time + ros::Duration(flight_time_);
+    return transmission_time + ros::Duration(flight_time_/1000);
   }
   else
   {
@@ -167,6 +172,7 @@ vehicle_interface::AcousticModemAckPtr CommsSim::generateAckMsg(unsigned int msg
   vehicle_interface::AcousticModemAckPtr msg(new vehicle_interface::AcousticModemAck());
   msg->ack = ack;
   msg->msg_id = msg_id;
+  ROS_INFO_STREAM("ACK_MSG " << ack << " : " << msg->ack);
   return msg;
 }
 
@@ -269,7 +275,7 @@ void CommsSim::doWork()
    * Check for each node if any message is received and process it accordingly.
    * Loop around the comms nodes, check if it is time to receive a message, and decide if you receive it.
    */
-
+  //ROS_ERROR_STREAM_THROTTLE(0.1,"Doing work...");
   //std::cout << "doWork(), list size = " << node_list_.size() << std::endl;
   ros::spinOnce();
   std::vector<CommsNode>::iterator it;
@@ -280,28 +286,41 @@ void CommsSim::doWork()
       CommsMsg msg;
       bool received;
       received = it->handleMsg(msg);
+      ROS_INFO_STREAM("Message: " << msg.getMessage()->msg_id << " received: " << received << " from node: " << msg.getMessage()->address);
       if (!(msg.getType() == "BurstAck" || msg.getType() == "IMAck")) //We don't ack other acks
       {
         if (msg.getMessage()->ack == true)
         {
           if (msg.getMessage()->address != 255) //Broadcast messages won't be acked even if they request an ack.
           {
-            vehicle_interface::AcousticModemAckPtr ack_msg = generateAckMsg(msg.getMessage()->msg_id, received);
+            vehicle_interface::AcousticModemAckPtr ack_msg;// = generateAckMsg(msg.getMessage()->msg_id, received);
+            ack_msg->ack = received;
+            ack_msg->msg_id = msg.getMessage()->msg_id;
             ros::Time transmission_time = ros::Time::now();
             ros::Time delivery_time = calculateDeliveryTime(msg.getSender(), msg.getReceiver(), transmission_time);
-            std::vector<CommsNode>::iterator it;
-            for (it = node_list_.begin(); it != node_list_.end(); it++)
+            ROS_INFO_STREAM("Generating ack for: " << msg.getSender() << " with transmission time: " << transmission_time);
+            ROS_INFO_STREAM(ack_msg->ack);
+            std::vector<CommsNode>::iterator it_ack;
+            for (it_ack = node_list_.begin(); it_ack != node_list_.end(); it_ack++)
             {
-              if (it->getName() == msg.getSender()) //We publish the ack to the sender of the message
+              if (it_ack->getName() == msg.getSender()) //We publish the ack to the sender of the message
               {
-                if (msg.getType() == "Burst")
-                  it->pushMessage(
+                if (msg.getType() == "Burst") {
+                  CommsMsg ack(ack_msg, transmission_time, delivery_time, msg.getReceiver(), msg.getSender(), false,
+                               "BurstAck");
+                  it_ack->pushMessage(ack);
+                }
+                  /*it_ack->pushMessage(
                       CommsMsg(ack_msg, transmission_time, delivery_time, msg.getReceiver(), msg.getSender(), false,
-                               "BurstAck"));
-                else if (msg.getType() == "IM")
-                  it->pushMessage(
+                               "BurstAck"));*/
+                else if (msg.getType() == "IM") {
+                  CommsMsg ack(ack_msg, transmission_time, delivery_time, msg.getReceiver(), msg.getSender(), false,
+                               "IMAck");
+                  it_ack->pushMessage(ack);
+                }
+                  /*it_ack->pushMessage(
                       CommsMsg(ack_msg, transmission_time, delivery_time, msg.getReceiver(), msg.getSender(), false,
-                               "IMAck"));
+                               "IMAck"));*/
                 break;
               }
             }

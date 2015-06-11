@@ -1,17 +1,17 @@
 <launch>
 
-  <param name="/time_scale" value="1"/>
+  <!--<param name="/time_scale" value="1"/>
   <param name="/time_start_sec" value="1000"/>
   <param name="/time_start_nsec" value="0"/>
   <param name="/time_free_running" value="true"/>
   <param name="/clock_publish_rate" value="100.0"/>
-  <node pkg="sim_clock" name="sim_clock" type="sim_clock"/>
+  <node pkg="sim_clock" name="sim_clock" type="sim_clock"/>-->
 
+  <!--<param name="/use_sim_time" value="true"/>-->
   
-  
-  <param name="sim/per_type" value="5"/>
-  <param name="sim/per" value="0"/>  
-  <param name="sim/collision_window" value="0"/>
+  <param name="sim/per_type" value="0"/>
+  <param name="sim/per" value="0.5"/>  
+  <param name="sim/collision_window" value="1"/>
   
   <param name="sim/use_fixed_flight_time" value="true"/>
   <param name="sim/flight_time" value="2000"/>
@@ -22,6 +22,49 @@
   <param name="sim/meduim_speed" value="0.5"/>
   
   
-  <node pkg="comms_sim" name="comm_sim" type="commsim" output="screen"/>    
+  <node pkg="comms_sim" name="comm_sim" type="commsim" output="screen" launch-prefix="xterm -e gdb -ex run --args"/> 
+  
+  <group ns="sauv1">
+    <param name="tf_prefix" value="sauv1"/>
+
+    <param name="conf/nav_sim/waterColumnDepth" value="10.0"/>
+    <param name="conf/nav_sim/maxWallTimeSendFreq" value="25.0"/>
+    <param name="conf/nav_sim/origin_latitude" value="56.380033"/>
+    <param name="conf/nav_sim/origin_longitude" value="-4.271616"/>
+    <param name="conf/nav_sim/start_north" value="0"/>
+    <param name="conf/nav_sim/start_east" value="0"/>
+    <param name="conf/nav_sim/start_depth" value="5"/>
+    <param name="conf/nav_sim/start_yaw_deg" value="0"/>
+
+    <rosparam command="load" ns="conf" file="$(find auv_pilot)/pilot.yaml"/>
+    <param name="conf/autopilot/diagPeriod" value="0"/>
+
+    <param name="robot_description" command="cat $(find auv_description)/urdf/sauv1.urdf"/>
+
+    <node pkg="auv_nav_sim" name="auv_nav_sim" type="nav_sim"/>
+    <node pkg="auv_pilot" name="auv_pilot" type="pilot" args="-nowatcher"/>
+
+  </group>
+
+  <group ns="iauv1">
+    <param name="tf_prefix" value="iauv1"/>
+
+    <param name="conf/nav_sim/waterColumnDepth" value="10.0"/>
+    <param name="conf/nav_sim/maxWallTimeSendFreq" value="25.0"/>
+    <param name="conf/nav_sim/origin_latitude" value="56.380033"/>
+    <param name="conf/nav_sim/origin_longitude" value="-4.271616"/>
+    <param name="conf/nav_sim/start_north" value="10"/>
+    <param name="conf/nav_sim/start_east" value="10"/>
+    <param name="conf/nav_sim/start_depth" value="0"/>
+    <param name="conf/nav_sim/start_yaw_deg" value="0"/>
+
+    <rosparam command="load" ns="conf" file="$(find auv_pilot)/pilot.yaml"/>
+    <param name="conf/autopilot/diagPeriod" value="0"/>
+
+    <param name="robot_description" command="cat $(find auv_description)/urdf/iauv1.urdf"/>
+
+    <node pkg="auv_nav_sim" name="auv_nav_sim" type="nav_sim"/>
+    <node pkg="auv_pilot" name="auv_pilot" type="pilot" args="-nowatcher"/>
+  </group>   
   
 </launch>
