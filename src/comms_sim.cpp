@@ -3,6 +3,7 @@
  *
  *  Created on: 22 Jan 2015
  *      Author: nick
+ * TEST COMMENT
  */
 
 #include <comms_sim/comms_sim.h>
