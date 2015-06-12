@@ -69,7 +69,7 @@ void CommsSim::addCommsNode(std::string node_name, int id)
 void CommsSim::modemOutBurstCB(const vehicle_interface::AcousticModemPayload::ConstPtr &msg, std::string node_name)
 {
   //Here we receive a message from the node with node_name. We should put the message to all the other nodes' queues.
-  ROS_INFO_STREAM("Ack: " << msg->ack << " address: " << msg->address << " id: " << msg->msg_id);
+  ROS_INFO_STREAM("Ack: " << (msg->ack ? "true" : "false")  << " address: " << (int) msg->address << " id: " << msg->msg_id);
   std::vector<CommsNode>::iterator it;
   vehicle_interface::AcousticModemPayloadPtr payload_msg(new vehicle_interface::AcousticModemPayload);
   payload_msg->header = msg->header;
