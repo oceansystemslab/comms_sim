@@ -48,7 +48,10 @@ void CommsNode::checkForPER(CommsMsg &msg)
   {
     if (rndNum < per_)
     {
-      ROS_INFO_STREAM("Node: " << name_ << " Message PER loss for message: " << msg.getMessage()->msg_id);
+      if(msg.getType() == "IM" || msg.getType() == "Burst")
+        ROS_INFO_STREAM("Node: " << name_ << " Message PER loss for message: " << msg.getMessage()->msg_id);
+      else
+        ROS_INFO_STREAM("Node: " << name_ << " Message PER loss for ack message: " << msg.getAck()->msg_id);
       msg.setErrorStatus(true);
     }
   }
@@ -107,7 +110,7 @@ bool CommsNode::isMessageTime(ros::Time now)
     return false;
   }
   //Compare the current time with the first message time of arrival and return if it is time to receive the message.
-  if (abs((msg_queue_[0].getDeliveryTime() - now).toSec()) < 0.005) //Todo: Check this number.
+  if (msg_queue_[0].getDeliveryTime() < now)//abs((msg_queue_[0].getDeliveryTime() - now).toSec()) < 0.005) //Todo: Check this number.
   {
     return true;
   }
@@ -117,14 +120,22 @@ bool CommsNode::isMessageTime(ros::Time now)
 bool CommsNode::isMessageReceived()
 {
   //Check if message is to be received. if not just discard the message.
-  checkForMessageCollisions();
-  checkForPER(msg_queue_[0]);
-  return !msg_queue_[0].getErrorStatus(); //If error status is true then the message is not received.
+  if(!msg_queue_.empty()) {
+    checkForMessageCollisions();
+    checkForPER(msg_queue_[0]);
+    return !msg_queue_[0].getErrorStatus(); //If error status is true then the message is not received.
+  }
+  else {
+    ROS_ERROR_STREAM("Message queue empty. Shouldn't be like that.");
+  }
 }
 
 void CommsNode::pushMessage(CommsMsg msg)
 {
+  ROS_INFO_STREAM("Pushed message type: " << msg.getType() << " from: " << msg.getSender() << " to: " << msg.getReceiver());
+  ROS_INFO_STREAM("Queue size before: " << msg_queue_.size());
   msg_queue_.push_back(msg);
+  ROS_INFO_STREAM("Queue size after: " << msg_queue_.size());
 }
 
 CommsMsg CommsNode::popMsg()
@@ -180,7 +191,10 @@ bool CommsNode::handleMsg(CommsMsg &msg)
   if (isMessageReceived())
   {
     msg = popMsg();
-    ROS_INFO_STREAM("Node: " << name_ << " Message received: " << msg.getMessage()->msg_id);
+    if(msg.getType() == "IM" || msg.getType() == "Burst")
+      ROS_INFO_STREAM("Node: " << name_ << " Message received: " << msg.getMessage()->msg_id);
+    else
+      ROS_INFO_STREAM("Node: " << name_ << " Ack Message received: " << msg.getAck()->msg_id);
     publishMessage(msg);
     return true;
   }
@@ -197,3 +211,5 @@ bool CommsNode::handleMsg(CommsMsg &msg)
   }
   return false;
 }
+
+int CommsNode::getID() { return id_; }

@@ -63,6 +63,7 @@ public:
   bool handleMsg(CommsMsg &msg);
   CommsMsg popMsg();
   std::string getName();
+  int getID();
 };
 
 #endif /* COMMS_NODE_H_ */
