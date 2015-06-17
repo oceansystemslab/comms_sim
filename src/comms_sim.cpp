@@ -77,6 +77,13 @@ void CommsSim::modemOutBurstCB(const vehicle_interface::AcousticModemPayload::Co
   payload_msg->address = msg->address;
   payload_msg->msg_id = msg->msg_id;
   payload_msg->payload = msg->payload;
+  for (it = node_list_.begin(); it != node_list_.end(); it++) {
+    if(it->getName() == node_name)
+    {
+      payload_msg->address = it->getID();
+      break;
+    }
+  }
   for (it = node_list_.begin(); it != node_list_.end(); it++)
   {
     //Handle incoming message.
@@ -102,6 +109,13 @@ void CommsSim::modemOutIMCB(const vehicle_interface::AcousticModemPayloadConstPt
   payload_msg->address = msg->address;
   payload_msg->msg_id = msg->msg_id;
   payload_msg->payload = msg->payload;
+  for (it = node_list_.begin(); it != node_list_.end(); it++) {
+    if(it->getName() == node_name)
+    {
+      payload_msg->address = it->getID();
+      break;
+    }
+  }
   ROS_INFO_STREAM("Ack: " << (payload_msg->ack ? "true" : "false")  << " address: " << (int) payload_msg->address << " id: " << payload_msg->msg_id);
   for (it = node_list_.begin(); it != node_list_.end(); it++)
   {
@@ -283,10 +297,14 @@ void CommsSim::doWork()
   {
     if (it->isMessageTime(ros::Time::now()))
     {
+      ROS_INFO_STREAM("Handling message for node: " << it->getName());
       CommsMsg msg;
       bool received;
       received = it->handleMsg(msg);
-      ROS_INFO_STREAM("Message: " << msg.getMessage()->msg_id << " received: " << received << " from node: " << (int) msg.getMessage()->address);
+      if(msg.getType() == "IM" || msg.getType() == "Burst")
+        ROS_INFO_STREAM("Message: " << msg.getMessage()->msg_id << " received: " << received << " from node: " << (int) msg.getMessage()->address);
+      else
+        ROS_INFO_STREAM("Ack Message: " << msg.getAck()->msg_id << " received: " << received);
       if (!(msg.getType() == "BurstAck" || msg.getType() == "IMAck")) //We don't ack other acks
       {
         if (msg.getMessage()->ack == true)
@@ -299,7 +317,7 @@ void CommsSim::doWork()
             ros::Time transmission_time = ros::Time::now();
             ros::Time delivery_time = calculateDeliveryTime(msg.getSender(), msg.getReceiver(), transmission_time);
             ROS_INFO_STREAM("Generating ack for: " << msg.getSender() << " with transmission time: " << transmission_time);
-            ROS_INFO_STREAM((ack_msg->ack ? "true" : "false"));
+            ROS_INFO_STREAM("Ack: " << (ack_msg->ack ? "true" : "false") << " id: " << ack_msg->msg_id);
             std::vector<CommsNode>::iterator it_ack;
             for (it_ack = node_list_.begin(); it_ack != node_list_.end(); it_ack++)
             {
